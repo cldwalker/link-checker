@@ -56,7 +56,7 @@ $(function() {
     $.post('/repositories', {id: clientId, user: user});
     $('#results').show();
     $('#message').show();
-    $('#message').html('Fetching repositories... <img src=\'/images/spinner.gif\' />');
+    $('#message').html('Fetching links... <img src=\'/images/spinner.gif\' />');
     $('#user').val('');
     $('tbody').html('');
     document.title = user + "'s Github Repositories"
