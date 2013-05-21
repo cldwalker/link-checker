@@ -1,0 +1,52 @@
+!!!
+%html
+  %head
+    %title Authors on Github
+    %meta(charset='utf-8')
+    %meta(name='viewport' content='width=device-width')
+    %script(src='js/jquery-2.0.0.min.js')
+    %script(src='js/app.js')
+    %link(rel='stylesheet' href='css/normalize.css')
+    %link(rel='stylesheet' href='css/foundation.min.css')
+    %link(rel='stylesheet' href='css/app.css')
+  %body
+    %nav.top-bar
+      %ul.title-area.left
+        %li.name
+          %h1
+            %a(href='https://github.com/cldwalker/link-checker') Source Code
+      %ul.left
+        %li.name
+          %h1
+            %a(href='https://github.com/cldwalker/link-checker#description') About
+    .row
+      %h1.title Authors on Github
+    .row
+      %form
+        %h4 See how a github author maintains their repositories
+        %label.user(for='user')
+          Github user&nbsp;
+          %span (Example:&nbsp;
+            %a.user defunkt
+            )
+        %input(name='user' id='user')
+        %input.button.small.round(type='submit')
+    .row
+      .alert-box.alert
+        #error
+        %a.close(href='#') &times;
+    .row
+      #message.panel.large-12.columns
+    .row
+      %table#results.large-12.columns
+        %thead
+          %tr
+            %th Full Name
+            %th(title='Issues that have been closed / Total issues') Closed Issues
+            %th(title='Open issues that have been answered / Total open issues') Answered Open Issues
+            %th(title='Number of pull requests / Total issues') Pull Requests
+            %th(title='Average number of days for an issue to be closed/resolved') Days to Close Average
+            %th(title='Average number of comments for all issues') Comments Average
+            %th(title='Date of last issue created') Last Issue Date
+            %th(title='Date of last pushed commit to repository') Last Pushed Date
+        %tbody
