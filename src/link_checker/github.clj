@@ -2,6 +2,7 @@
   (:require [tentacles.repos :refer [user-repos specific-repo]]
             [tentacles.issues :as issues]
             [io.pedestal.service.log :as log]
+            [clj-http.client :as client]
             [com.github.ragnard.hamelito.hiccup :as haml]
             [link-checker.util :refer [get! average difference-in-hours format-date]]
             [clostache.parser :as clostache]))
@@ -44,19 +45,30 @@ or an oauth token."
   (haml/html
    (clostache/render-resource template repo-map)))
 
-(defn- sends-final-events
+(defn calc-time
+  [start-time]
+  (->> (/ (- (System/currentTimeMillis) start-time) 1000)
+       float
+       (format "%.2f")))
+
+(defn- send-final-message
   "Sends a results event containing total row and message event summarizing user repositories."
-  [send-to user links]
+  [send-to time links]
   (send-to
    "message"
-   (format "%s of the links are on github."
-           (count (filter #(re-find #"github.com" (:url %)) links)))))
+   (format "Took %ss to fetch %s links. %s links did not return a 200."
+           time
+           (count links)
+           (count (remove #(= 200 (:status %)) links)))))
 
 (defn- fetch-link [url]
   (log/info :msg (format "Fetching link %s" url))
-  (let [status (try (slurp url) 200
-                    (catch Exception e 404))]
-    {:url url :status status :thread-id (.. Thread currentThread getId)}) )
+  (let [resp (try (client/get url {:max-redirects 5 :throw-exceptions false})
+                    (catch Exception err {:error err}))]
+    {:url url
+     :status (or (:error resp) (:status resp))
+     :response resp
+     :thread-id (.. Thread currentThread getId)}) )
 
 (defn- fetch-link-and-send-row [send-to user url]
   (let [result-map (fetch-link url)]
@@ -72,9 +84,9 @@ what part of the page it's updating."
     (send-to "message"
              (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
                      user (count links)))
-    (->> links
-         (pmap (partial fetch-link-and-send-row send-to user))
-         (sends-final-events send-to user))
+    (let [start-time (System/currentTimeMillis)
+          link-results (doall (pmap (partial fetch-link-and-send-row send-to user) links))]
+      (send-final-message send-to (calc-time start-time) link-results))
     (send-to "end-message" user)))
 
 (defn stream-repositories

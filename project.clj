@@ -12,6 +12,7 @@
                  [io.pedestal/pedestal.jetty "0.1.5"]
                  ;; [io.pedestal/pedestal.tomcat "0.1.5"]
 
+                 [clj-http "0.7.2"]
                  [com.github.ragnard/hamelito "0.2.1"]
                  [tentacles "0.2.5"]
                  [de.ubercode.clostache/clostache "1.3.1"]
