@@ -63,7 +63,11 @@ or an oauth token."
 
 (defn- fetch-link [url]
   (log/info :msg (format "Fetching link %s" url))
-  (let [resp (try (client/get url {:max-redirects 5 :throw-exceptions false})
+  (let [resp (try (let [opts {:max-redirects 5 :throw-exceptions false}
+                        head (client/head url opts)]
+                    (if (> 400 (:status head) 199)
+                      head
+                      (client/get url opts)))
                     (catch Exception err {:error err}))]
     {:url url
      :status (or (:error resp) (:status resp))
