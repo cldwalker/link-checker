@@ -97,7 +97,9 @@ or an oauth token."
 
 (defn- url->links
   [url]
-  (let [resp (client/get url default-clj-http-options)]
+  (let [resp (try
+               (client/get url default-clj-http-options)
+               (catch Exception e nil))]
     (when (= 200 (:status resp))
       (filter #(re-find #"^http" (str %)) (doto (body->links (:body resp)) prn)))))
 
@@ -105,16 +107,17 @@ or an oauth token."
   "Sends 3 different sse events (message, results, end-message) depending on
 what part of the page it's updating."
   [send-event-fn sse-context user]
-  (when-let [links (url->links user)]
-    (let [#_(->>  (fetch-repos user) (filter (comp seq :homepage)) (map :homepage))
-          send-to (partial send-event-fn sse-context)]
-      (send-to "message"
-               (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
-                       user (count links)))
-      (let [start-time (System/currentTimeMillis)
-            link-results (doall (pmap (partial fetch-link-and-send-row send-to user) links))]
-        (send-final-message send-to (calc-time start-time) link-results))
-      (send-to "end-message" (str "result?url=" user)))))
+  (let [send-to (partial send-event-fn sse-context)]
+    (if-let [links (url->links user)]
+      (do
+        (send-to "message"
+                 (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
+                         user (count links)))
+        (let [start-time (System/currentTimeMillis)
+              link-results (doall (pmap (partial fetch-link-and-send-row send-to user) links))]
+          (send-final-message send-to (calc-time start-time) link-results))
+        (send-to "end-message" (str "result?url=" user)))
+      (send-to "error" "Unable to fetch given url."))))
 
 (defn stream-repositories
   "Streams a url's verified links with a given fn and sse-context."
