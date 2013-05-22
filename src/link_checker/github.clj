@@ -61,13 +61,18 @@ or an oauth token."
            (count links)
            (count (remove #(= 200 (:status %)) links)))))
 
+(def default-clj-http-options
+  {:max-redirects 5
+   :throw-exceptions false
+   :conn-timeout 100
+   :socket-timeout 1000})
+
 (defn- fetch-link [url]
   (log/info :msg (format "Fetching link %s" url))
-  (let [resp (try (let [opts {:max-redirects 5 :throw-exceptions false}
-                        head (client/head url opts)]
+  (let [resp (try (let [head (client/head url default-clj-http-options)]
                     (if (> 400 (:status head) 199)
                       head
-                      (client/get url opts)))
+                      (client/get url default-clj-http-options)))
                     (catch Exception err {:error err}))]
     {:url url
      :status (or (:error resp) (:status resp))
