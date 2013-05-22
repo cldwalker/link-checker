@@ -4,6 +4,7 @@
             [io.pedestal.service.log :as log]
             [clj-http.client :as client]
             [com.github.ragnard.hamelito.hiccup :as haml]
+            [net.cgrand.enlive-html :as enlive]
             [link-checker.util :refer [get! average difference-in-hours format-date]]
             [clostache.parser :as clostache]))
 
@@ -84,26 +85,43 @@ or an oauth token."
     (send-to "results" (render-haml "public/row.haml" result-map))
     result-map))
 
+(defn- body->links
+  [string]
+  (-> string
+      (java.io.StringReader.)
+      enlive/html-resource
+      (enlive/select [:a])
+      (as-> enlive-maps (map
+                         #(get-in % [:attrs :href])
+                         enlive-maps))))
+
+(defn- url->links
+  [url]
+  (let [resp (client/get url default-clj-http-options)]
+    (when (= 200 (:status resp))
+      (filter #(re-find #"^http" (str %)) (doto (body->links (:body resp)) prn)))))
+
 (defn- stream-repositories*
   "Sends 3 different sse events (message, results, end-message) depending on
 what part of the page it's updating."
   [send-event-fn sse-context user]
-  (let [links (->>  (fetch-repos user) (filter (comp seq :homepage)) (map :homepage))
-        send-to (partial send-event-fn sse-context)]
-    (send-to "message"
-             (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
-                     user (count links)))
-    (let [start-time (System/currentTimeMillis)
-          link-results (doall (pmap (partial fetch-link-and-send-row send-to user) links))]
-      (send-final-message send-to (calc-time start-time) link-results))
-    (send-to "end-message" user)))
+  (when-let [links (url->links user)]
+    (let [#_(->>  (fetch-repos user) (filter (comp seq :homepage)) (map :homepage))
+          send-to (partial send-event-fn sse-context)]
+      (send-to "message"
+               (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
+                       user (count links)))
+      (let [start-time (System/currentTimeMillis)
+            link-results (doall (pmap (partial fetch-link-and-send-row send-to user) links))]
+        (send-final-message send-to (calc-time start-time) link-results))
+      (send-to "end-message" (str "result?url=" user)))))
 
 (defn stream-repositories
-  "Streams a user's repositories with a given fn and sse-context."
-  [send-event-fn sse-context user]
-  (if user
+  "Streams a url's verified links with a given fn and sse-context."
+  [send-event-fn sse-context url]
+  (if url
     (try
-      (stream-repositories* send-event-fn sse-context user)
+      (stream-repositories* send-event-fn sse-context url)
       {:status 200}
       (catch clojure.lang.ExceptionInfo exception
         (log/error :msg (str "40X response from Github: " (pr-str (ex-data exception))))
@@ -114,4 +132,4 @@ what part of the page it's updating."
       (catch Exception exception
         (log/error :msg (str "Unexpected error: " exception))
         (send-event-fn sse-context "error" "An unexpected error occurred. :(")))
-    (log/error :msg "No user given to fetch repositories. Ignored.")))
+    (log/error :msg "No url given to verify links. Ignored.")))
