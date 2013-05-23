@@ -6,7 +6,8 @@
             [com.github.ragnard.hamelito.hiccup :as haml]
             [net.cgrand.enlive-html :as enlive]
             [link-checker.util :refer [get! average difference-in-hours format-date]]
-            [clostache.parser :as clostache]))
+            [clostache.parser :as clostache])
+  (:import [java.net URL]))
 
 ;;; helpers
 (defn gh-auth
@@ -65,8 +66,8 @@ or an oauth token."
 (def default-clj-http-options
   {:max-redirects 5
    :throw-exceptions false
-   :conn-timeout 100
-   :socket-timeout 1000})
+   :conn-timeout 3000
+   :socket-timeout 3000})
 
 (defn- fetch-link [url]
   (log/info :msg (format "Fetching link %s" url))
@@ -95,13 +96,29 @@ or an oauth token."
                          #(get-in % [:attrs :href])
                          enlive-maps))))
 
+(defn- invalid-link?
+  [link]
+  (or (contains? #{nil "" "#"} link)
+      (re-find #"^(javascript:|irc:)" link)))
+
+;;; thanks to alida's util.cl
+(defn- expand-relative-links
+  [url links]
+  (let [jurl (URL. url)]
+    (map #(str (URL. jurl %)) links)))
+
 (defn- url->links
   [url]
   (let [resp (try
                (client/get url default-clj-http-options)
                (catch Exception e nil))]
     (when (= 200 (:status resp))
-      (filter #(re-find #"^http" (str %)) (doto (body->links (:body resp)) prn)))))
+      (expand-relative-links
+       url
+       (->> (:body resp)
+            body->links
+            distinct
+            (remove invalid-link?))))))
 
 (defn- stream-repositories*
   "Sends 3 different sse events (message, results, end-message) depending on
