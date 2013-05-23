@@ -18,7 +18,7 @@ function initEventSource(clientId) {
     return;
   }
 
-  var es = new EventSource('/repositories?id='+clientId);
+  var es = new EventSource('/links?id='+clientId);
   es.addEventListener('results', function(e) {
     $("#results").append(e.data + "\n");
   });
@@ -53,13 +53,13 @@ $(function() {
   });
 
   var fetchUserRepos = function(user) {
-    $.post('/repositories', {id: clientId, user: user});
+    $.post('/links', {id: clientId, user: user});
     $('#results').show();
     $('#message').show();
     $('#message').html('Fetching links... <img src=\'/images/spinner.gif\' />');
     $('#user').val('');
     $('tbody').html('');
-    document.title = user + "'s Github Repositories"
+    document.title = "Links for " + user;
     $('h1.title').html(document.title);
   };
 

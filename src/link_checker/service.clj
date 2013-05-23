@@ -7,7 +7,7 @@
               [io.pedestal.service.log :as log]
               [com.github.ragnard.hamelito.hiccup :as haml]
               [clojure.java.io :as io]
-              [link-checker.github :refer [stream-repositories]]
+              [link-checker.check :refer [stream-links]]
               [link-checker.util :refer [get-in!]]
               [ring.util.response :as ring-resp]))
 
@@ -18,12 +18,12 @@
 
 (def ^{:doc "Map of IDs to SSE contexts"} subscribers (atom {}))
 
-(defn repositories-page
+(defn links-page
   "Saves sse-context for streaming."
   [sse-context]
   (if-let [id (get-in sse-context [:request :query-params :id])]
     (swap! subscribers assoc id sse-context)
-    (log/error :msg "No id passed to /repositories. Ignored.")))
+    (log/error :msg "No id passed to /links. Ignored.")))
 
 (defn- get-sse-context
   "If sse-context doesn't exist yet, sleep and try again. This was needed for safari and
@@ -36,20 +36,20 @@ opening a user url in a new tab."
       (Thread/sleep 500)
       (get @subscribers id))))
 
-(defn stream-repositories-page
-  "Stream repositories to the given client id."
+(defn stream-links-page
+  "Stream links to the given client id."
   [request]
   (if-let [id (get-in request [:form-params "id"])]
     (if-let [sse-context (get-sse-context id)]
-      (stream-repositories sse/send-event sse-context (get-in! request [:form-params "user"]))
+      (stream-links sse/send-event sse-context (get-in! request [:form-params "user"]))
       (log/error :msg (str "No sse context for id " id)))
-    (log/error :msg "No id passed to stream repositories. Ignored.")))
+    (log/error :msg "No id passed to stream links. Ignored.")))
 
 (defroutes routes
   [[["/"
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
-     ["/repositories" {:get [::repositories (sse/start-event-stream repositories-page)]
-                        :post stream-repositories-page}]
+     ["/links" {:get [::links (sse/start-event-stream links-page)]
+                        :post stream-links-page}]
      ["/*user" {:get home-page}]]]])
 
 ;; You can use this fn or a per-request fn via io.pedestal.service.http.route/url-for

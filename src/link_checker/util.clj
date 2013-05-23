@@ -3,6 +3,13 @@
   (:require clj-time.core
             clj-time.format))
 
+(defn calc-time
+  "Calculates a duration to the nearest hundredth second given a ms start time."
+  [start-time]
+  (->> (/ (- (System/currentTimeMillis) start-time) 1000)
+       float
+       (format "%.2f")))
+
 (defn get-in!
   "Fail fast if no truish value for get-in"
   [m ks]
