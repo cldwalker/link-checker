@@ -10,6 +10,14 @@
        float
        (format "%.2f")))
 
+(defn shorten-to
+  "Ensure a string is max-length"
+  [s max-length]
+  (let [s-length (count s)]
+    (if (> s-length max-length)
+      (str (.substring s 0 (- max-length 3)) "...")
+      s)))
+
 (defn get-in!
   "Fail fast if no truish value for get-in"
   [m ks]

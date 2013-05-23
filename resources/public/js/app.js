@@ -34,6 +34,7 @@ function initEventSource(clientId) {
   es.onerror = function(e) {
     $('.alert-box').show();
     $('#error').html(e.data);
+    $('#message').hide();
   };
   return es;
 };
@@ -82,7 +83,7 @@ $(function() {
   }
 
   var match;
-  if (match = location.pathname.match(/^\/(.+)/)) {
+  if (match = window.location.search.match(/url=([^&]+)/)) {
     // Allow time for sse to register
     setTimeout(function() {fetchLinks(match[1])},
                500);

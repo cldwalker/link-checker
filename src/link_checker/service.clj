@@ -50,7 +50,8 @@ opening a result url in a new tab."
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
      ["/links" {:get [::links (sse/start-event-stream links-page)]
                         :post stream-links-page}]
-     ["/*user" {:get home-page}]]]])
+     ["/" {:get home-page}]
+     ["/result" {:get [::results home-page]}]]]])
 
 ;; You can use this fn or a per-request fn via io.pedestal.service.http.route/url-for
 (def url-for (route/url-for-routes routes))

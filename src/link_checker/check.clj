@@ -3,7 +3,7 @@
             [clj-http.client :as client]
             [com.github.ragnard.hamelito.hiccup :as haml]
             [net.cgrand.enlive-html :as enlive]
-            [link-checker.util :refer [calc-time]]
+            [link-checker.util :refer [calc-time shorten-to]]
             [clostache.parser :as clostache])
   (:import [java.net URL]))
 
@@ -28,14 +28,23 @@
    :conn-timeout 3000
    :socket-timeout 3000})
 
+(defn client-get [url]
+  (log/info :msg (format "Thread %s: GET %s" (.. Thread currentThread getId) url))
+  (client/get url default-clj-http-options))
+
+(defn client-head [url]
+  (log/info :msg (format "Thread %s: HEAD %s" (.. Thread currentThread getId) url))
+  (client/head url default-clj-http-options))
+
 (defn- fetch-link [url]
-  (log/info :msg (format "Fetching link %s" url))
-  (let [resp (try (let [head (client/head url default-clj-http-options)]
+  (log/info :msg (format "Verifying link %s ..." url))
+  (let [resp (try (let [head (client-head url)]
                     (if (> 400 (:status head) 199)
                       head
-                      (client/get url default-clj-http-options)))
+                      (client-get url)))
                     (catch Exception err {:error err}))]
     {:url url
+     :shortened-url (shorten-to url 80)
      :status (or (:error resp) (:status resp))
      :response resp
      :thread-id (.. Thread currentThread getId)}) )
@@ -69,7 +78,7 @@
 (defn- url->links
   [url]
   (let [resp (try
-               (client/get url default-clj-http-options)
+               (client-get url)
                (catch Exception e nil))]
     (when (= 200 (:status resp))
       (expand-relative-links
@@ -93,7 +102,7 @@ what part of the page it's updating."
               link-results (doall (pmap (partial fetch-link-and-send-row send-to url) links))]
           (send-final-message send-to (calc-time start-time) link-results))
         (send-to "end-message" (str "result?url=" url)))
-      (send-to "error" "Unable to fetch given url."))))
+      (send-to "error" "Unable to fetch the given url."))))
 
 (defn stream-links
   "Streams a url's verified links with a given fn and sse-context."
