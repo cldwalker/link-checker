@@ -6,15 +6,15 @@ tr.no-contribution td {
   background-color: #fff;
 }
 
-label.user {
+label.url {
   font-size: 30px;
 }
-label.user span {
+label.url span {
   font-size: 20px;
   color: #999;
 }
 
-#user {
+#url {
   margin-right: 5px;
 }
 

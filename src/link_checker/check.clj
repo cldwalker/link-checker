@@ -40,8 +40,8 @@
      :response resp
      :thread-id (.. Thread currentThread getId)}) )
 
-(defn- fetch-link-and-send-row [send-to user url]
-  (let [result-map (fetch-link url)]
+(defn- fetch-link-and-send-row [send-to url link]
+  (let [result-map (fetch-link link)]
     (send-to "results" (render-haml "public/row.haml" result-map))
     result-map))
 
@@ -82,17 +82,17 @@
 (defn- stream-links*
   "Sends 3 different sse events (message, results, end-message) depending on
 what part of the page it's updating."
-  [send-event-fn sse-context user]
+  [send-event-fn sse-context url]
   (let [send-to (partial send-event-fn sse-context)]
-    (if-let [links (url->links user)]
+    (if-let [links (url->links url)]
       (do
         (send-to "message"
                  (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
-                         user (count links)))
+                         url (count links)))
         (let [start-time (System/currentTimeMillis)
-              link-results (doall (pmap (partial fetch-link-and-send-row send-to user) links))]
+              link-results (doall (pmap (partial fetch-link-and-send-row send-to url) links))]
           (send-final-message send-to (calc-time start-time) link-results))
-        (send-to "end-message" (str "result?url=" user)))
+        (send-to "end-message" (str "result?url=" url)))
       (send-to "error" "Unable to fetch given url."))))
 
 (defn stream-links

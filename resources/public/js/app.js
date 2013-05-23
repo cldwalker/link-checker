@@ -52,27 +52,27 @@ $(function() {
     }
   });
 
-  var fetchUserRepos = function(user) {
-    $.post('/links', {id: clientId, user: user});
+  var fetchLinks = function(url) {
+    $.post('/links', {id: clientId, url: url});
     $('#results').show();
     $('#message').show();
     $('#message').html('Fetching links... <img src=\'/images/spinner.gif\' />');
-    $('#user').val('');
+    $('#url').val('');
     $('tbody').html('');
-    document.title = "Links for " + user;
+    document.title = "Links for " + url;
     $('h1.title').html(document.title);
   };
 
   $("form").on('submit', function(e) {
-    fetchUserRepos($("#user").val());
+    fetchLinks($("#url").val());
     e.preventDefault();
   });
 
   // close alert box
   $('a.close').on('click', function(e) { $(e.target).parent().hide() });
 
-  $('a.user').on('click', function(e) {
-    fetchUserRepos(e.target.text);
+  $('a.url').on('click', function(e) {
+    fetchLinks(e.target.text);
     e.preventDefault;
   });
 
@@ -84,7 +84,7 @@ $(function() {
   var match;
   if (match = location.pathname.match(/^\/(.+)/)) {
     // Allow time for sse to register
-    setTimeout(function() {fetchUserRepos(match[1])},
+    setTimeout(function() {fetchLinks(match[1])},
                500);
   } else {
     window.history.pushState({"message": '', "results": '', "title": $("h1.title").html()},

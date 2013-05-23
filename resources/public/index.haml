@@ -1,7 +1,7 @@
 !!!
 %html
   %head
-    %title Authors on Github
+    %title Link Checker
     %meta(charset='utf-8')
     %meta(name='viewport' content='width=device-width')
     %script(src='js/jquery-2.0.0.min.js')
@@ -20,16 +20,16 @@
           %h1
             %a(href='https://github.com/cldwalker/link-checker#description') About
     .row
-      %h1.title Authors on Github
+      %h1.title Link Checker
     .row
       %form
-        %h4 See how a github author maintains their repositories
-        %label.user(for='user')
-          Github user&nbsp;
+        %h4 Verify links for a given url
+        %label.url(for='url')
+          Url&nbsp;
           %span (Example:&nbsp;
-            %a.user defunkt
+            %a.url http://google.com
             )
-        %input(name='user' id='user')
+        %input(name='url' id='url')
         %input.button.small.round(type='submit')
     .row
       .alert-box.alert
