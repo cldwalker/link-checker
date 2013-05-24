@@ -26,7 +26,7 @@
   {:max-redirects 5
    :throw-exceptions false
    :conn-timeout 3000
-   :socket-timeout 3000})
+   :socket-timeout 4000})
 
 (defn client-get [url]
   (log/info :msg (format "Thread %s: GET %s" (.. Thread currentThread getId) url))
@@ -69,7 +69,7 @@
 (defn- invalid-link?
   [link]
   (or (contains? #{nil "" "#"} link)
-      (re-find #"^(javascript:|irc:)" link)))
+      (re-find #"^(javascript:|irc:|mailto:)" link)))
 
 ;;; thanks to alida's util.cl
 (defn- expand-relative-links
