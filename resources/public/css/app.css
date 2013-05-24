@@ -1,25 +1,21 @@
-tr.contribution td {
-  background-color: #f9f9f9;
-}
-
-tr.no-contribution td {
-  background-color: #fff;
+input {
+  margin-bottom: 5px;
 }
 
 label.url {
   font-size: 30px;
 }
-label.url span {
+label.selector {
+ font-size: 25px;
+}
+
+label span {
   font-size: 20px;
   color: #999;
 }
 
 #url {
   margin-right: 5px;
-}
-
-span.stars, span.fork {
-  font-size: 90%;
 }
 
 #message, #results, .alert-box {

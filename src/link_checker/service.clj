@@ -41,7 +41,8 @@ opening a result url in a new tab."
   [request]
   (if-let [id (get-in request [:form-params "id"])]
     (if-let [sse-context (get-sse-context id)]
-      (stream-links sse/send-event sse-context (get-in! request [:form-params "url"]))
+      (stream-links sse/send-event sse-context (get-in! request [:form-params "url"])
+                    {:selector (get-in request [:form-params "selector"])})
       (log/error :msg (str "No sse context for id " id)))
     (log/error :msg "No id passed to stream links. Ignored.")))
 

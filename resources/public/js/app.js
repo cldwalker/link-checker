@@ -53,19 +53,20 @@ $(function() {
     }
   });
 
-  var fetchLinks = function(url) {
-    $.post('/links', {id: clientId, url: url});
+  var fetchLinks = function(url, selector) {
+    $.post('/links', {id: clientId, url: url, selector: selector});
     $('#results').show();
     $('#message').show();
     $('#message').html('Fetching links... <img src=\'/images/spinner.gif\' />');
     $('#url').val('');
+    $('#selector').val('');
     $('tbody').html('');
-    document.title = "Links for " + url;
+    document.title = "Links for " + url + (selector ? " with selector " + selector : "");
     $('h1.title').html(document.title);
   };
 
   $("form").on('submit', function(e) {
-    fetchLinks($("#url").val());
+    fetchLinks($("#url").val(), $("#selector").val());
     e.preventDefault();
   });
 
@@ -73,7 +74,7 @@ $(function() {
   $('a.close').on('click', function(e) { $(e.target).parent().hide() });
 
   $('a.url').on('click', function(e) {
-    fetchLinks(e.target.text);
+    fetchLinks(e.target.text, null);
     e.preventDefault;
   });
 
@@ -84,8 +85,9 @@ $(function() {
 
   var match;
   if (match = window.location.search.match(/url=([^&]+)/)) {
+    var selector = window.location.search.match(/selector=([^&]+)/);
     // Allow time for sse to register
-    setTimeout(function() {fetchLinks(match[1])},
+    setTimeout(function() { fetchLinks(match[1], selector ? selector[1] : null) },
                500);
   } else {
     window.history.pushState({"message": '', "results": '', "title": $("h1.title").html()},

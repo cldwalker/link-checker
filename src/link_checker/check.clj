@@ -55,11 +55,13 @@
     result-map))
 
 (defn- body->links
-  [string]
+  [string options]
+  (prn options)
   (-> string
       (java.io.StringReader.)
       enlive/html-resource
-      (enlive/select [:a])
+      (enlive/select (if (seq (:selector options))
+                       [(keyword (:selector options)) :a] [:a]))
       (as-> enlive-maps (map
                          #(get-in % [:attrs :href])
                          enlive-maps))))
@@ -76,24 +78,24 @@
     (map #(str (URL. jurl %)) links)))
 
 (defn- url->links
-  [url]
+  [url options]
   (let [resp (try
                (client-get url)
                (catch Exception e nil))]
     (when (= 200 (:status resp))
       (expand-relative-links
        url
-       (->> (:body resp)
-            body->links
+       (->> options
+            (body->links (:body resp))
             distinct
             (remove invalid-link?))))))
 
 (defn- stream-links*
   "Sends 3 different sse events (message, results, end-message) depending on
 what part of the page it's updating."
-  [send-event-fn sse-context url]
+  [send-event-fn sse-context url options]
   (let [send-to (partial send-event-fn sse-context)]
-    (if-let [links (url->links url)]
+    (if-let [links (url->links url options)]
       (do
         (send-to "message"
                  (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
@@ -101,17 +103,19 @@ what part of the page it's updating."
         (let [start-time (System/currentTimeMillis)
               link-results (doall (pmap (partial fetch-link-and-send-row send-to url) links))]
           (send-final-message send-to (calc-time start-time) link-results))
-        (send-to "end-message" (str "result?url=" url)))
+        (send-to "end-message" (str "result?url=" url
+                                    (if (seq (:selector options))
+                                      (str "&selector=" (:selector options)) ""))))
       (send-to "error" "Unable to fetch the given url."))))
 
 (defn stream-links
   "Streams a url's verified links with a given fn and sse-context."
-  [send-event-fn sse-context url]
+  [send-event-fn sse-context url options]
   (if url
     (try
-      (stream-links* send-event-fn sse-context url)
+      (stream-links* send-event-fn sse-context url options)
       {:status 200}
-      (catch Exception exception
+      #_(catch Exception exception
         (log/error :msg (str "Unexpected error: " exception))
         (send-event-fn sse-context "error" "An unexpected error occurred. :(")))
     (log/error :msg "No url given to verify links. Ignored.")))
