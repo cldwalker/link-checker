@@ -56,7 +56,6 @@
 
 (defn- body->links
   [string options]
-  (prn options)
   (-> string
       (java.io.StringReader.)
       enlive/html-resource
@@ -90,23 +89,30 @@
             distinct
             (remove invalid-link?))))))
 
+(defn- valid-selector?
+  [selector]
+  (re-find #"^[\.#a-zA-Z0-9_-]+$" selector))
+
 (defn- stream-links*
   "Sends 3 different sse events (message, results, end-message) depending on
 what part of the page it's updating."
   [send-event-fn sse-context url options]
-  (let [send-to (partial send-event-fn sse-context)]
-    (if-let [links (url->links url options)]
-      (do
-        (send-to "message"
-                 (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
-                         url (count links)))
-        (let [start-time (System/currentTimeMillis)
-              link-results (doall (pmap (partial fetch-link-and-send-row send-to url) links))]
-          (send-final-message send-to (calc-time start-time) link-results))
-        (send-to "end-message" (str "result?url=" url
-                                    (if (seq (:selector options))
-                                      (str "&selector=" (:selector options)) ""))))
-      (send-to "error" "Unable to fetch the given url."))))
+  (let [send-to (partial send-event-fn sse-context)
+        selector (clojure.string/trim (:selector options))]
+    (if (and (seq selector) (not (valid-selector? selector)))
+      (send-to "error" "Selector is invalid. Try again.")
+      (if-let [links (url->links url (assoc options :selector selector))]
+       (do
+         (send-to "message"
+                  (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
+                          url (count links)))
+         (let [start-time (System/currentTimeMillis)
+               link-results (doall (pmap (partial fetch-link-and-send-row send-to url) links))]
+           (send-final-message send-to (calc-time start-time) link-results))
+         (send-to "end-message" (str "result?url=" url
+                                     (if (seq (:selector options))
+                                       (str "&selector=" (:selector options)) ""))))
+       (send-to "error" "Unable to fetch the given url.")))))
 
 (defn stream-links
   "Streams a url's verified links with a given fn and sse-context."
@@ -115,7 +121,7 @@ what part of the page it's updating."
     (try
       (stream-links* send-event-fn sse-context url options)
       {:status 200}
-      #_(catch Exception exception
+      (catch Exception exception
         (log/error :msg (str "Unexpected error: " exception))
         (send-event-fn sse-context "error" "An unexpected error occurred. :(")))
     (log/error :msg "No url given to verify links. Ignored.")))
