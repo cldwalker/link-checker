@@ -27,10 +27,19 @@ function initEventSource(clientId) {
                               "title": document.title,
                               "results": $("#results").html()},
                              null, e.data);
-    $('#results-control').on('click', function(e) { $('tr.success').toggle(); });
+    var toggle_fn;
+    if ($('tbody tr.success').length == $('tbody tr').length) {
+      var toggle_fn = function(e) { $('#results').toggle() };
+    }
+    else {
+      var toggle_fn = function(e) { $('tr.success').toggle() };
+    };
+    $('#results-control').off('click');
+    $('#results-control').on('click', toggle_fn);
     $('#results-control').show();
-    $('tr.success').hide();
+    toggle_fn();
   });
+
   es.onmessage = function(e) {
     $('#message').html(e.data + "\n");
   };
@@ -58,9 +67,12 @@ $(function() {
 
   var fetchLinks = function(url, selector) {
     $.post('/links', {id: clientId, url: url, selector: selector});
+    //reset to defaults
     $('#results').show();
+    $('tr.success').show();
     $('#results-control').hide();
     $('#message').show();
+
     $('#message').html('Fetching links... <img src=\'/images/spinner.gif\' />');
     $('#url').val('');
     $('#selector').val('');
