@@ -22,6 +22,11 @@ label span {
   color: #999;
 }
 
+label .desc {
+  font-size: 15px;
+  color: #999;
+}
+
 #url {
   margin-right: 5px;
 }
