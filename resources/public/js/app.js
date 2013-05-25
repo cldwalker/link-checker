@@ -27,6 +27,9 @@ function initEventSource(clientId) {
                               "title": document.title,
                               "results": $("#results").html()},
                              null, e.data);
+    $('#results-control').on('click', function(e) { $('tr.success').toggle(); });
+    $('#results-control').show();
+    $('tr.success').hide();
   });
   es.onmessage = function(e) {
     $('#message').html(e.data + "\n");
@@ -56,6 +59,7 @@ $(function() {
   var fetchLinks = function(url, selector) {
     $.post('/links', {id: clientId, url: url, selector: selector});
     $('#results').show();
+    $('#results-control').hide();
     $('#message').show();
     $('#message').html('Fetching links... <img src=\'/images/spinner.gif\' />');
     $('#url').val('');

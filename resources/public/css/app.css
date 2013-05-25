@@ -31,6 +31,6 @@ label .desc {
   margin-right: 5px;
 }
 
-#message, #results, .alert-box {
+#message, #results, #results-control, .alert-box {
   display: none;
 }
