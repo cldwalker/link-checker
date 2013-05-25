@@ -20,10 +20,11 @@
           %h1
             %a(href='https://github.com/cldwalker/link-checker#description') About
     .row
-      %h1.title Link Checker
+      %h1
+        %a(href='/') Link Checker
     .row
       %form
-        %h2 Verify links for a given url
+        %h2.title Verify links for a given url
         %label.selector(for='selector') CSS Selector
           %span &nbsp;(optional)
         %input(name='selector' size='35' id='selector')

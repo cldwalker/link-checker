@@ -48,7 +48,7 @@ $(function() {
     if (e.state) {
       $("#message").html(e.state.message);
       $("#results").html(e.state.results);
-      $("h1.title").html(e.state.title);
+      $("h2.title").html(e.state.title);
       document.title = e.state.title;
     }
   });
@@ -62,7 +62,7 @@ $(function() {
     $('#selector').val('');
     $('tbody').html('');
     document.title = "Links for " + url + (selector ? " with selector " + selector : "");
-    $('h1.title').html(document.title);
+    $('h2.title').html(document.title);
   };
 
   $("form").on('submit', function(e) {
@@ -90,7 +90,7 @@ $(function() {
     setTimeout(function() { fetchLinks(match[1], selector ? selector[1] : null) },
                500);
   } else {
-    window.history.pushState({"message": '', "results": '', "title": $("h1.title").html()},
+    window.history.pushState({"message": '', "results": '', "title": $("h2.title").html()},
                              null,
                              '');
   }
