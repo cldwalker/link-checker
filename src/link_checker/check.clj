@@ -17,10 +17,12 @@
   [send-to time links]
   (send-to
    "message"
-   (format "Took %ss to fetch %s links. %s links did not return a 200."
-           time
-           (count links)
-           (count (remove #(= 200 (:status %)) links)))))
+   (if (zero? (count links))
+     "No links found. Check your link and selector."
+     (format "Took %ss to fetch %s links. %s links did not return a 200."
+             time
+             (count links)
+             (count (remove #(= 200 (:status %)) links))))))
 
 (def default-clj-http-options
   {:max-redirects 5
