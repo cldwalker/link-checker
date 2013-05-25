@@ -4,7 +4,8 @@
             [com.github.ragnard.hamelito.hiccup :as haml]
             [net.cgrand.enlive-html :as enlive]
             [link-checker.util :refer [calc-time shorten-to]]
-            [clostache.parser :as clostache])
+            [clostache.parser :as clostache]
+            [clojure.repl])
   (:import [java.net URL]))
 
 (defn- render-haml
@@ -22,7 +23,7 @@
      (format "Took %ss to fetch %s links. %s links did not return a 200."
              time
              (count links)
-             (count (remove #(= 200 (:status %)) links))))))
+             (count (remove #(= "200" (:status %)) links))))))
 
 (def default-clj-http-options
   {:max-redirects 5
@@ -44,10 +45,14 @@
                     (if (> 400 (:status head) 199)
                       head
                       (client-get url)))
-                    (catch Exception err {:error err}))]
+                  (catch Exception err {:error err}))
+        status (if (:error resp) (str "Request failed: " (:error resp)) (str (:status resp)))]
     {:url url
      :shortened-url (shorten-to url 80)
-     :status (or (:error resp) (:status resp))
+     :status status
+     :shortened-status (shorten-to status 40)
+     :tr-class (if (= 200 (:status resp)) "success"
+                   (if (:error resp) "failure" "no-success"))
      :response resp
      :thread-id (.. Thread currentThread getId)}) )
 
@@ -70,7 +75,7 @@
 (defn- invalid-link?
   [link]
   (or (contains? #{nil "" "#"} link)
-      (re-find #"^(javascript:|irc:|mailto:)" link)))
+      (re-find #"^(git:|javascript:|irc:|mailto:)" link)))
 
 ;;; thanks to alida's util.cl
 (defn- expand-relative-links
@@ -125,5 +130,6 @@ what part of the page it's updating."
       {:status 200}
       (catch Exception exception
         (log/error :msg (str "Unexpected error: " exception))
+        (clojure.repl/pst exception) ;; should log instead of print
         (send-event-fn sse-context "error" "An unexpected error occurred. :(")))
     (log/error :msg "No url given to verify links. Ignored.")))

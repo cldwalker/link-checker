@@ -1,3 +1,11 @@
+tr.failure td {
+  background-color: rgb(218, 11, 11);
+}
+
+tr.no-success td {
+  background-color: rgb(250, 250, 0);
+}
+
 input {
   margin-bottom: 5px;
 }
