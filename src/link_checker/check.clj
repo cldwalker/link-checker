@@ -5,7 +5,8 @@
             [net.cgrand.enlive-html :as enlive]
             [link-checker.util :refer [calc-time shorten-to]]
             [clostache.parser :as clostache]
-            [clojure.repl])
+            [clojure.repl]
+            [clojure.string])
   (:import [java.net URL]))
 
 (defn- render-haml
@@ -47,6 +48,17 @@
   (log/info :msg (format "Thread %s: HEAD %s" (.. Thread currentThread getId) url))
   (client/head url default-clj-http-options))
 
+(defn- build-status
+  "status is an error string, a message for 3XX or a number"
+  [resp]
+  (if (:error resp) (str "Request failed: " (:error resp))
+      (if (> 400 (:status resp) 299)
+        (format "%s - Reached redirect limit (%s) with: %s"
+                (:status resp)
+                (:max-redirects default-clj-http-options)
+                (clojure.string/join " , " (rest (:trace-redirects resp))))
+        (:status resp))))
+
 (defn- fetch-link [url]
   (log/info :msg (format "Verifying link %s ..." url))
   (let [resp (try (let [head (client-head url)]
@@ -54,7 +66,7 @@
                       head
                       (client-get url)))
                   (catch Exception err {:error err}))
-        status (if (:error resp) (str "Request failed: " (:error resp)) (:status resp))]
+        status (build-status resp)]
     {:url url
      :shortened-url (shorten-to url 80)
      :status status
