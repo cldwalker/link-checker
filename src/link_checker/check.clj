@@ -18,22 +18,6 @@
   [status]
   (and (integer? status) (> 300 status 199)))
 
-(defn- send-final-message
-  "Sends a results event containing total row and message event summarizing checked links."
-  [send-to time links]
-  (send-to
-   "message"
-   (if (zero? (count links))
-     "No links found. Check your link and selector."
-     (let [invalid-links (count (remove #(successful-status? (:status %)) links))]
-       (format "%s It took %ss to fetch %s links."
-               (case invalid-links
-                 0 "All links are valid!"
-                 1 "1 link did not return a 2XX response."
-                 (str invalid-links " links did not return a 2XX response."))
-              time
-              (count links))))))
-
 (def default-clj-http-options
   {:max-redirects 5
    :throw-exceptions false
@@ -49,7 +33,7 @@
   (client/head url default-clj-http-options))
 
 (defn- build-status
-  "status is an error string, a message for 3XX or a number"
+  "Returns status as an error string, a message for 3XX or a status number"
   [resp]
   (if (:error resp) (str "Request failed: " (:error resp))
       (if (> 400 (:status resp) 299)
@@ -59,7 +43,9 @@
                 (clojure.string/join " , " (rest (:trace-redirects resp))))
         (:status resp))))
 
-(defn- fetch-link [url]
+(defn- fetch-link
+  "Fetches a url and returns a map to render its status in a table."
+  [url]
   (log/info :msg (format "Verifying link %s ..." url))
   (let [resp (try (let [head (client-head url)]
                     (if (> 400 (:status head) 199)
@@ -78,7 +64,9 @@
 
 (def ^{:doc "Map of IDs to remaining links count"} link-counts (atom {}))
 
-(defn- fetch-link-and-send-row [send-to url total-links client-id link]
+(defn- fetch-link-and-send-row
+  "Fetches a link and sends its status via a server side event"
+  [send-to url total-links client-id link]
   (let [result-map (fetch-link link)]
     (when (get @link-counts client-id)
       (swap! link-counts update-in [client-id] dec)
@@ -91,6 +79,7 @@
     result-map))
 
 (defn- body->links
+  "Converts a url's body to links."
   [string options]
   (-> string
       (java.io.StringReader.)
@@ -108,11 +97,13 @@
 
 ;;; thanks to alida's util.cl
 (defn- expand-relative-links
+  "Expands links in order to validate them."
   [url links]
   (let [jurl (URL. url)]
     (map #(str (URL. jurl %)) links)))
 
 (defn- url->links
+  "Converts a url to a list of links. Returns nil if response is not a 200."
   [url options]
   (let [resp (try
                (client-get url)
@@ -126,8 +117,25 @@
             (remove invalid-link?))))))
 
 (defn- valid-selector?
+  "Only allow the most basic selector i.e. no whitespace, alphanumeric chars and div or id."
   [selector]
   (re-find #"^[\.#a-zA-Z0-9_-]+$" selector))
+
+(defn- send-final-message
+  "Sends a results event containing total row and message event summarizing checked links."
+  [send-to time links]
+  (send-to
+   "message"
+   (if (zero? (count links))
+     "No links found. Check your link and selector."
+     (let [invalid-links (count (remove #(successful-status? (:status %)) links))]
+       (format "%s It took %ss to fetch %s links."
+               (case invalid-links
+                 0 "All links are valid!"
+                 1 "1 link did not return a 2XX response."
+                 (str invalid-links " links did not return a 2XX response."))
+              time
+              (count links))))))
 
 (defn- stream-links*
   "Sends 3 different sse events (message, results, end-message) depending on
