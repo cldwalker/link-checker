@@ -13,6 +13,10 @@
   (haml/html
    (clostache/render-resource template repo-map)))
 
+(defn- successful-status?
+  [status]
+  (and (integer? status) (> 300 status 199)))
+
 (defn- send-final-message
   "Sends a results event containing total row and message event summarizing checked links."
   [send-to time links]
@@ -20,12 +24,12 @@
    "message"
    (if (zero? (count links))
      "No links found. Check your link and selector."
-     (let [invalid-links (count (remove #(= "200" (:status %)) links))]
-       (format "%s. It took %ss to fetch %s links."
+     (let [invalid-links (count (remove #(successful-status? (:status %)) links))]
+       (format "%s It took %ss to fetch %s links."
                (case invalid-links
                  0 "All links are valid!"
-                 1 "1 link did not return a 200."
-                 (str invalid-links " links did not return a 200."))
+                 1 "1 link did not return a 2XX response."
+                 (str invalid-links " links did not return a 2XX response."))
               time
               (count links))))))
 
@@ -50,12 +54,12 @@
                       head
                       (client-get url)))
                   (catch Exception err {:error err}))
-        status (if (:error resp) (str "Request failed: " (:error resp)) (str (:status resp)))]
+        status (if (:error resp) (str "Request failed: " (:error resp)) (:status resp))]
     {:url url
      :shortened-url (shorten-to url 80)
      :status status
-     :shortened-status (shorten-to status 40)
-     :tr-class (if (= 200 (:status resp)) "success"
+     :shortened-status (shorten-to (str status) 40)
+     :tr-class (if (successful-status? (:status resp)) "success"
                    (if (:error resp) "failure" "no-success"))
      :response resp
      :thread-id (.. Thread currentThread getId)}) )
