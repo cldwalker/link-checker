@@ -21,13 +21,13 @@
    (if (zero? (count links))
      "No links found. Check your link and selector."
      (let [invalid-links (count (remove #(= "200" (:status %)) links))]
-      (format "Took %ss to fetch %s links. %s"
+       (format "%s. It took %ss to fetch %s links."
+               (case invalid-links
+                 0 "All links are valid!"
+                 1 "1 link did not return a 200."
+                 (str invalid-links " links did not return a 200."))
               time
-              (count links)
-              (case invalid-links
-                0 "All links are valid!"
-                1 "1 link did not return a 200."
-                (str invalid-links " links did not return a 200.")))))))
+              (count links))))))
 
 (def default-clj-http-options
   {:max-redirects 5
