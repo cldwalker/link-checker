@@ -76,8 +76,23 @@
               time
               (count links))))))
 
+(defn- check-links
+  [send-to links url options]
+  (swap! link-counts assoc (:client-id options) (count links))
+  (send-to "message"
+           (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
+                   url (count links)))
+  (let [start-time (System/currentTimeMillis)
+        link-results (doall (pmap (partial fetch-link-and-send-row send-to url
+                                           (count links) (:client-id options))
+                                  links))]
+    (send-final-message send-to (calc-time start-time) link-results))
+  (send-to "end-message" (str "result?url=" url
+                              (if (empty? (:selector options)) ""
+                                (str "&selector=" (:selector options))))))
+
 (defn- stream-links*
-  "Sends 3 different sse events (message, results, end-message) depending on
+  "Sends 4 different sse events (message, results, end-message, error) depending on
 what part of the page it's updating."
   [send-event-fn sse-context url options]
   (let [send-to (partial send-event-fn sse-context)
@@ -85,19 +100,7 @@ what part of the page it's updating."
     (if (and (seq selector) (not (valid-selector? selector)))
       (send-to "error" "Selector is invalid. Try again.")
       (if-let [links (url->links url (assoc options :selector selector))]
-        (do
-          (swap! link-counts assoc (:client-id options) (count links))
-          (send-to "message"
-                   (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
-                           url (count links)))
-          (let [start-time (System/currentTimeMillis)
-                link-results (doall (pmap (partial fetch-link-and-send-row send-to url
-                                                   (count links) (:client-id options))
-                                         links))]
-           (send-final-message send-to (calc-time start-time) link-results))
-          (send-to "end-message" (str "result?url=" url
-                                      (if (seq (:selector options))
-                                        (str "&selector=" (:selector options)) ""))))
+        (check-links send-to links url options)
         (send-to "error" "Unable to fetch the given url.")))))
 
 (defn stream-links
