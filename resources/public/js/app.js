@@ -20,7 +20,7 @@ function initEventSource(clientId) {
 
   var es = new EventSource('/links?id='+clientId);
   es.addEventListener('results', function(e) {
-    $("#results").append(e.data + "\n");
+    $("#results").prepend(e.data + "\n");
   });
   es.addEventListener('end-message', function(e) {
     window.history.pushState({"message": $("#message").html(),
