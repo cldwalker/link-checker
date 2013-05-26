@@ -7,7 +7,7 @@
               [io.pedestal.service.log :as log]
               [com.github.ragnard.hamelito.hiccup :as haml]
               [clojure.java.io :as io]
-              [link-checker.check :refer [stream-links]]
+              [link-checker.render :refer [stream-links]]
               [link-checker.util :refer [get-in!]]
               [ring.util.response :as ring-resp]))
 

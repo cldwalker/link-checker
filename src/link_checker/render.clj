@@ -1,36 +1,17 @@
-(ns link-checker.check
+(ns link-checker.render
   (:require [io.pedestal.service.log :as log]
-            [clj-http.client :as client]
             [com.github.ragnard.hamelito.hiccup :as haml]
-            [net.cgrand.enlive-html :as enlive]
             [link-checker.util :refer [calc-time shorten-to]]
+            [link-checker.http :refer [successful-status? url->links fetch-link
+                                       default-clj-http-options]]
             [clostache.parser :as clostache]
             [clojure.repl]
-            [clojure.string])
-  (:import [java.net URL]))
+            [clojure.string]))
 
 (defn- render-haml
   [template repo-map]
   (haml/html
    (clostache/render-resource template repo-map)))
-
-(defn- successful-status?
-  [status]
-  (and (integer? status) (> 300 status 199)))
-
-(def default-clj-http-options
-  {:max-redirects 5
-   :throw-exceptions false
-   :conn-timeout 3000
-   :socket-timeout 4000})
-
-(defn client-get [url]
-  (log/info :msg (format "Thread %s: GET %s" (.. Thread currentThread getId) url))
-  (client/get url default-clj-http-options))
-
-(defn client-head [url]
-  (log/info :msg (format "Thread %s: HEAD %s" (.. Thread currentThread getId) url))
-  (client/head url default-clj-http-options))
 
 (defn- build-status
   "Returns status as an error string, a message for 3XX or a status number"
@@ -43,15 +24,11 @@
                 (clojure.string/join " , " (rest (:trace-redirects resp))))
         (:status resp))))
 
-(defn- fetch-link
-  "Fetches a url and returns a map to render its status in a table."
+(defn- link->result
+  "Fetches a url and returns a map to render its results."
   [url]
   (log/info :msg (format "Verifying link %s ..." url))
-  (let [resp (try (let [head (client-head url)]
-                    (if (> 400 (:status head) 199)
-                      head
-                      (client-get url)))
-                  (catch Exception err {:error err}))
+  (let [resp (fetch-link url)
         status (build-status resp)]
     {:url url
      :shortened-url (shorten-to url 80)
@@ -67,7 +44,7 @@
 (defn- fetch-link-and-send-row
   "Fetches a link and sends its status via a server side event"
   [send-to url total-links client-id link]
-  (let [result-map (fetch-link link)]
+  (let [result-map (link->result link)]
     (when (get @link-counts client-id)
       (swap! link-counts update-in [client-id] dec)
       (when (zero? (rem (get @link-counts client-id) 5))
@@ -77,44 +54,6 @@
                                    (get @link-counts client-id)))))
     (send-to "results" (render-haml "public/row.haml" result-map))
     result-map))
-
-(defn- body->links
-  "Converts a url's body to links."
-  [string options]
-  (-> string
-      (java.io.StringReader.)
-      enlive/html-resource
-      (enlive/select (if (seq (:selector options))
-                       [(keyword (:selector options)) :a] [:a]))
-      (as-> enlive-maps (map
-                         #(get-in % [:attrs :href])
-                         enlive-maps))))
-
-(defn- invalid-link?
-  [link]
-  (or (contains? #{nil "" "#"} link)
-      (re-find #"^(git:|javascript:|irc:|mailto:)" link)))
-
-;;; thanks to alida's util.cl
-(defn- expand-relative-links
-  "Expands links in order to validate them."
-  [url links]
-  (let [jurl (URL. url)]
-    (map #(str (URL. jurl %)) links)))
-
-(defn- url->links
-  "Converts a url to a list of links. Returns nil if response is not a 200."
-  [url options]
-  (let [resp (try
-               (client-get url)
-               (catch Exception e nil))]
-    (when (= 200 (:status resp))
-      (expand-relative-links
-       url
-       (->> options
-            (body->links (:body resp))
-            distinct
-            (remove invalid-link?))))))
 
 (defn- valid-selector?
   "Only allow the most basic selector i.e. no whitespace, alphanumeric chars and div or id."
