@@ -60,8 +60,14 @@
      :response resp
      :thread-id (.. Thread currentThread getId)}) )
 
-(defn- fetch-link-and-send-row [send-to url link]
+(def ^{:doc "Map of IDs to remaining links count"} link-counts (atom {}))
+
+(defn- fetch-link-and-send-row [send-to url client-id link]
   (let [result-map (fetch-link link)]
+    (when (get @link-counts client-id)
+      (swap! link-counts update-in [client-id] dec)
+      (when (zero? (rem (get @link-counts client-id) 5))
+        (send-to "message" (format "Links remaining %s... <img src='/images/spinner.gif' />"  (get @link-counts client-id)))))
     (send-to "results" (render-haml "public/row.haml" result-map))
     result-map))
 
@@ -113,17 +119,19 @@ what part of the page it's updating."
     (if (and (seq selector) (not (valid-selector? selector)))
       (send-to "error" "Selector is invalid. Try again.")
       (if-let [links (url->links url (assoc options :selector selector))]
-       (do
-         (send-to "message"
-                  (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
-                          url (count links)))
-         (let [start-time (System/currentTimeMillis)
-               link-results (doall (pmap (partial fetch-link-and-send-row send-to url) links))]
+        (do
+          (swap! link-counts assoc (:client-id options) (count links))
+          (send-to "message"
+                   (format "%s has %s links. Fetching data... <img src='/images/spinner.gif' />"
+                           url (count links)))
+          (let [start-time (System/currentTimeMillis)
+                link-results (doall (pmap (partial fetch-link-and-send-row send-to url (:client-id options))
+                                         links))]
            (send-final-message send-to (calc-time start-time) link-results))
-         (send-to "end-message" (str "result?url=" url
-                                     (if (seq (:selector options))
-                                       (str "&selector=" (:selector options)) ""))))
-       (send-to "error" "Unable to fetch the given url.")))))
+          (send-to "end-message" (str "result?url=" url
+                                      (if (seq (:selector options))
+                                        (str "&selector=" (:selector options)) ""))))
+        (send-to "error" "Unable to fetch the given url.")))))
 
 (defn stream-links
   "Streams a url's verified links with a given fn and sse-context."
@@ -134,6 +142,6 @@ what part of the page it's updating."
       {:status 200}
       (catch Exception exception
         (log/error :msg (str "Unexpected error: " exception))
-        (clojure.repl/pst exception) ;; should log instead of print
+        (clojure.repl/pst exception 25) ;; should log instead of print
         (send-event-fn sse-context "error" "An unexpected error occurred. :(")))
     (log/error :msg "No url given to verify links. Ignored.")))
