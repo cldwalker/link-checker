@@ -10,7 +10,7 @@
 (deftest home-page-test
   (is (.contains
        (:body (response-for service :get "/"))
-       "Authors on Github"))
+       "Link Checker"))
   (is (=
        (:headers (response-for service :get "/"))
-       {"Content-Type" "text/html"})))
+       {"Content-Type" "text/html;charset=UTF-8"})))

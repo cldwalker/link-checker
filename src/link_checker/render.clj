@@ -96,7 +96,7 @@
 what part of the page it's updating."
   [send-event-fn sse-context url options]
   (let [send-to (partial send-event-fn sse-context)
-        selector (clojure.string/trim (:selector options))]
+        selector (clojure.string/trim (str (:selector options)))]
     (if (and (seq selector) (not (valid-selector? selector)))
       (send-to "error" "Selector is invalid. Try again.")
       (if-let [links (url->links url (assoc options :selector selector))]
