@@ -19,7 +19,7 @@ This app is a link checker that verifies links for a given url. Features include
 * After all links are validated, the total number of links fetched,
   number of unsuccessful (2XX) links and the total fetch time are displayed.
 
-This app lives [on heroku](#TODO).
+This app lives [on heroku](https://link-checker.herokuapp.com/).
 
 ## Running the App
 
