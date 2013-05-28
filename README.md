@@ -37,3 +37,6 @@ This app lives [on heroku](#TODO).
 
 * [W3C Link Checker](http://validator.w3.org/checklink) - Old link
   checker which respects robots.txt
+
+## TODO
+* Add a 1s delay between requests to the same domain

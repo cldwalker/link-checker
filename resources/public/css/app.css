@@ -17,7 +17,7 @@ label.selector {
  font-size: 25px;
 }
 
-label span {
+label span, .note {
   font-size: 20px;
   color: #999;
 }
