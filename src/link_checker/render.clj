@@ -5,7 +5,7 @@
             [link-checker.http :refer [successful-status? url->links fetch-link
                                        default-clj-http-options]]
             [clostache.parser :as clostache]
-            [clojure.repl]
+            [clojure.stacktrace]
             [clojure.string]))
 
 (defn- render-haml
@@ -111,7 +111,8 @@ what part of the page it's updating."
       (stream-links* send-event-fn sse-context url options)
       {:status 200}
       (catch Exception exception
-        (log/error :msg (str "Unexpected error: " exception))
-        (clojure.repl/pst exception 25) ;; should log instead of print
+        (log/error :msg (str "Unexpected error within stream-links")
+                   :exception exception
+                   :stacktrace (with-out-str (clojure.stacktrace/print-stack-trace exception)))
         (send-event-fn sse-context "error" "An unexpected error occurred. :(")))
     (log/error :msg "No url given to verify links. Ignored.")))
