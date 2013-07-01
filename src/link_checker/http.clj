@@ -25,7 +25,7 @@
   (client/head url default-clj-http-options))
 
 (defn fetch-link
-  "Fetches a link by HEAD and if unsucessful by GET. Returns response or if an unexpected
+  "Fetches a link by HEAD and if unsuccessful by GET. Returns response or if an unexpected
 error occurs returns a map with exception in :error key."
   [url]
   (try
